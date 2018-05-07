@@ -23,6 +23,12 @@
 {{ define "slack.default.footer" }}{{ end }}
 
 
+{{ define "discord.default.username" }}{{ template "__alertmanager" . }}{{ end }}
+{{ define "discord.default.avatarurl" }}{{ end }}
+{{ define "discord.default.content" }}[***{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}***] {{ .CommonLabels.SortedPairs.Values | join " " }}{{ end }}
+{{ define "discord.default.color" }}{{ if eq .Status "firing" }}16711680{{ else }}65280{{ end }}{{ end }}
+
+
 {{ define "hipchat.default.from" }}{{ template "__alertmanager" . }}{{ end }}
 {{ define "hipchat.default.message" }}{{ template "__subject" . }}{{ end }}
 

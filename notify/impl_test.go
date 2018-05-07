@@ -54,6 +54,15 @@ func TestSlackRetry(t *testing.T) {
 	}
 }
 
+func TestDiscordRetry(t *testing.T) {
+	notifier := new(Discord)
+	retryCodes := append(defaultRetryCodes(), http.StatusTooManyRequests)
+	for statusCode, expected := range retryTests(retryCodes) {
+		actual, _ := notifier.retry(statusCode)
+		require.Equal(t, expected, actual, fmt.Sprintf("error on status %d", statusCode))
+	}
+}
+
 func TestHipchatRetry(t *testing.T) {
 	notifier := new(Hipchat)
 	retryCodes := append(defaultRetryCodes(), http.StatusTooManyRequests)

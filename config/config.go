@@ -195,6 +195,17 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				sc.APIURL = c.Global.SlackAPIURL
 			}
 		}
+		for _, sc := range rcv.DiscordConfigs {
+			if sc.HTTPConfig == nil {
+				sc.HTTPConfig = c.Global.HTTPConfig
+			}
+			if sc.APIURL == "" {
+				if c.Global.DiscordAPIURL == "" {
+					return fmt.Errorf("no global Discord API URL set")
+				}
+				sc.APIURL = c.Global.DiscordAPIURL
+			}
+		}
 		for _, hc := range rcv.HipchatConfigs {
 			if hc.HTTPConfig == nil {
 				hc.HTTPConfig = c.Global.HTTPConfig
@@ -369,6 +380,7 @@ type GlobalConfig struct {
 	SMTPAuthIdentity string `yaml:"smtp_auth_identity,omitempty" json:"smtp_auth_identity,omitempty"`
 	SMTPRequireTLS   bool   `yaml:"smtp_require_tls,omitempty" json:"smtp_require_tls,omitempty"`
 	SlackAPIURL      Secret `yaml:"slack_api_url,omitempty" json:"slack_api_url,omitempty"`
+	DiscordAPIURL    Secret `yaml:"discord_api_url,omitempty" json:"discord_api_url,omitempty"`
 	PagerdutyURL     string `yaml:"pagerduty_url,omitempty" json:"pagerduty_url,omitempty"`
 	HipchatAPIURL    string `yaml:"hipchat_api_url,omitempty" json:"hipchat_api_url,omitempty"`
 	HipchatAuthToken Secret `yaml:"hipchat_auth_token,omitempty" json:"hipchat_auth_token,omitempty"`
@@ -505,6 +517,7 @@ type Receiver struct {
 	PagerdutyConfigs []*PagerdutyConfig `yaml:"pagerduty_configs,omitempty" json:"pagerduty_configs,omitempty"`
 	HipchatConfigs   []*HipchatConfig   `yaml:"hipchat_configs,omitempty" json:"hipchat_configs,omitempty"`
 	SlackConfigs     []*SlackConfig     `yaml:"slack_configs,omitempty" json:"slack_configs,omitempty"`
+	DiscordConfigs   []*DiscordConfig   `yaml:"discord_configs,omitempty" json:"discord_configs,omitempty"`
 	WebhookConfigs   []*WebhookConfig   `yaml:"webhook_configs,omitempty" json:"webhook_configs,omitempty"`
 	OpsGenieConfigs  []*OpsGenieConfig  `yaml:"opsgenie_configs,omitempty" json:"opsgenie_configs,omitempty"`
 	WechatConfigs    []*WechatConfig    `yaml:"wechat_configs,omitempty" json:"wechat_configs,omitempty"`

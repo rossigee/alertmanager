@@ -75,6 +75,17 @@ var (
 		Footer:    `{{ template "slack.default.footer" . }}`,
 	}
 
+	// DefaultDiscordConfig defines default values for Discord configurations.
+	DefaultDiscordConfig = DiscordConfig{
+		NotifierConfig: NotifierConfig{
+			VSendResolved: false,
+		},
+		Username:  `{{ template "discord.default.username" . }}`,
+		AvatarURL: `{{ template "discord.default.avatarurl" . }}`,
+		Color:     `{{ template "discord.default.color" . }}`,
+		Content:   `{{ template "discord.default.content" . }}`,
+	}
+
 	// DefaultHipchatConfig defines default values for Hipchat configurations.
 	DefaultHipchatConfig = HipchatConfig{
 		NotifierConfig: NotifierConfig{
@@ -275,6 +286,52 @@ type SlackConfig struct {
 func (c *SlackConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	*c = DefaultSlackConfig
 	type plain SlackConfig
+	return unmarshal((*plain)(c))
+}
+
+// DiscordField configures a single Discord field that is sent with each notification.
+// Each field must contain a name, value
+// See https://discordapp.com/developers/docs/resources/channel#embed-object-embed-field-structure for more information.
+type DiscordField struct {
+	Name  string `yaml:"name,omitempty" json:"name,omitempty"`
+	Value string `yaml:"value,omitempty" json:"value,omitempty"`
+	//Inline *bool  `yaml:"inline,omitempty" json:"inline,omitempty"`
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface for DiscordField.
+func (c *DiscordField) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type plain DiscordField
+	if err := unmarshal((*plain)(c)); err != nil {
+		return err
+	}
+	if c.Name == "" {
+		return fmt.Errorf("missing name in Discord field configuration")
+	}
+	if c.Value == "" {
+		return fmt.Errorf("missing value in Discord field configuration")
+	}
+	return nil
+}
+
+// DiscordConfig configures notifications via Discord.
+type DiscordConfig struct {
+	NotifierConfig `yaml:",inline" json:",inline"`
+
+	HTTPConfig *commoncfg.HTTPClientConfig `yaml:"http_config,omitempty" json:"http_config,omitempty"`
+
+	APIURL Secret `yaml:"api_url,omitempty" json:"api_url,omitempty"`
+
+	Username  string `yaml:"username,omitempty" json:"username,omitempty"`
+	AvatarURL string `yaml:"avatar_url,omitempty" json:"avatar_url,omitempty"`
+	Content   string `yaml:"content,omitempty" json:"content,omitempty"`
+	Color     string `yaml:"color,omitempty" json:"color,omitempty"`
+	//Fields    []*DiscordField `yaml:"fields,omitempty" json:"fields,omitempty"`
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+func (c *DiscordConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	*c = DefaultDiscordConfig
+	type plain DiscordConfig
 	return unmarshal((*plain)(c))
 }
 

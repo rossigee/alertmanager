@@ -47,9 +47,9 @@ func TestDefaultReceiverExists(t *testing.T) {
 route:
    group_wait: 30s
 `
-    _, err := Load(in)
+	_, err := Load(in)
 
-    expected := "root route must specify a default receiver"
+	expected := "root route must specify a default receiver"
 
 	if err == nil {
 		t.Fatalf("no error returned, expected:\n%v", expected)
@@ -325,6 +325,7 @@ func TestEmptyFieldsAndRegex(t *testing.T) {
 			HipchatAuthToken: "mysecret",
 			HipchatAPIURL:    "https://hipchat.foobar.org/",
 			SlackAPIURL:      "mysecret",
+			DiscordAPIURL:    "mysecret",
 			SMTPRequireTLS:   true,
 			PagerdutyURL:     "https://events.pagerduty.com/v2/enqueue",
 			OpsGenieAPIURL:   "https://api.opsgenie.com/",

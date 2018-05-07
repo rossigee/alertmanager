@@ -126,6 +126,10 @@ func BuildReceiverIntegrations(nc *config.Receiver, tmpl *template.Template, log
 		n := NewSlack(c, tmpl, logger)
 		add("slack", i, n, c)
 	}
+	for i, c := range nc.DiscordConfigs {
+		n := NewDiscord(c, tmpl, logger)
+		add("discord", i, n, c)
+	}
 	for i, c := range nc.HipchatConfigs {
 		n := NewHipchat(c, tmpl, logger)
 		add("hipchat", i, n, c)
@@ -726,6 +730,119 @@ func (n *Slack) retry(statusCode int) (bool, error) {
 	// Only 5xx response codes are recoverable and 2xx codes are successful.
 	// https://api.slack.com/incoming-webhooks#handling_errors
 	// https://api.slack.com/changelog/2016-05-17-changes-to-errors-for-incoming-webhooks
+	if statusCode/100 != 2 {
+		return (statusCode/100 == 5), fmt.Errorf("unexpected status code %v", statusCode)
+	}
+
+	return false, nil
+}
+
+// Discord implements a Notifier for Discord notifications.
+type Discord struct {
+	conf   *config.DiscordConfig
+	tmpl   *template.Template
+	logger log.Logger
+}
+
+// NewDiscord returns a new Discord notification handler.
+func NewDiscord(c *config.DiscordConfig, t *template.Template, l log.Logger) *Discord {
+	return &Discord{
+		conf:   c,
+		tmpl:   t,
+		logger: l,
+	}
+}
+
+// discordReq is the request for sending a discord notification.
+type discordReq struct {
+	Username  string         `json:"username,omitempty"`
+	AvatarURL string         `json:"avatar_url,omitempty"`
+	Content   string         `json:"content,omitempty"`
+	Embeds    []discordEmbed `json:"embeds"`
+}
+
+// discordEmbed is used to display a richly-formatted message block.
+type discordEmbed struct {
+	Title       string                `json:"title,omitempty"`
+	Description string                `json:"description,omitempty"`
+	URL         string                `json:"url,omitempty"`
+	Color       string                `json:"color,omitempty"`
+	Fields      []config.DiscordField `json:"fields,omitempty"`
+}
+
+// Notify implements the Notifier interface.
+func (n *Discord) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
+	var err error
+	var (
+		data     = n.tmpl.Data(receiverName(ctx, n.logger), groupLabels(ctx, n.logger), as...)
+		tmplText = tmplText(n.tmpl, data, &err)
+	)
+
+	// Prepare array of embeds for this notification
+	var embeds []discordEmbed
+	for _, a := range as {
+		embed := discordEmbed{
+			//Title: tmplText(n.conf.Title),
+			//Description: tmplText(n.conf.Description),
+			//URL:         tmplText(n.conf.URL),
+			Color: tmplText(n.conf.Color),
+		}
+		embeds = append(embeds, embed)
+	}
+	/*
+		embed := &discordEmbed{
+			//Title: tmplText(n.conf.Title),
+			//Description: tmplText(n.conf.Description),
+			//URL:         tmplText(n.conf.URL),
+			Color:       tmplText(n.conf.Color),
+		}
+
+		var numFields = len(n.conf.Fields)
+		if numFields > 0 {
+			var fields = make([]config.DiscordField, numFields)
+			for index, field := range n.conf.Fields {
+				// Rebuild the field by executing any templates
+				fields[index] = config.DiscordField{
+					Name:  tmplText(field.Name),
+					Value: tmplText(field.Value),
+				}
+			}
+			embed.Fields = fields
+		}
+	*/
+
+	req := &discordReq{
+		Username:  tmplText(n.conf.Username),
+		AvatarURL: tmplText(n.conf.AvatarURL),
+		Content:   tmplText(n.conf.Content),
+		Embeds:    embeds,
+	}
+	if err != nil {
+		return false, err
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(req); err != nil {
+		return false, err
+	}
+
+	c, err := commoncfg.NewHTTPClientFromConfig(n.conf.HTTPConfig)
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := ctxhttp.Post(ctx, c, string(n.conf.APIURL), contentTypeJSON, &buf)
+	if err != nil {
+		return true, err
+	}
+	resp.Body.Close()
+
+	return n.retry(resp.StatusCode)
+}
+
+func (n *Discord) retry(statusCode int) (bool, error) {
+	// Only 5xx response codes are recoverable and 2xx codes are successful.
+	// https://discordapp.com/developers/docs/topics/opcodes-and-status-codes#http
 	if statusCode/100 != 2 {
 		return (statusCode/100 == 5), fmt.Errorf("unexpected status code %v", statusCode)
 	}
