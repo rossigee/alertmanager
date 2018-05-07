@@ -781,6 +781,7 @@ func (n *Discord) Notify(ctx context.Context, as ...*types.Alert) (bool, error) 
 	// Prepare array of embeds for this notification
 	var embeds []discordEmbed
 	for _, a := range as {
+		fmt.Println(a)
 		embed := discordEmbed{
 			//Title: tmplText(n.conf.Title),
 			//Description: tmplText(n.conf.Description),
